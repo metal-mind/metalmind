@@ -1,4 +1,5 @@
-""" Very simple interactive demo of two neurons stimulating a third. Has simple stimulation, decay, and refractory period dynamics
+""" Very simple interactive demo of two neurons stimulating a third. Has simple stimulation, decay, and refractory period dynamics. Note: don't attempt to derive insight into neural mechanics
+through examining this code base, rather this is meant as an interactive demo to create a better understanding of the dynamics.
 """
 
 import time

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Neuron Simulation</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        // Constants
+        const WIDTH = 822, HEIGHT = 482;
+        const NEURON_RADIUS = 60;
+        const NEURON_COLOR = 'black';
+        const NEURON_ACTIVE_COLOR = 'red'; // Color when neuron is clicked
+        const LINE_COLOR = 'grey';
+        const ACTIVE_DURATION = 400; // Duration for active color in milliseconds
+
+        const NEURON1_POS = { x: 119, y: 151 };  // Lined up with underlying background image
+        const NEURON2_POS = { x: 119, y: 331 };
+        const OUTPUT_NEURON_POS = { x: 690, y: 241 };
+
+        let neuronActivation = {
+            neuron1: false,
+            neuron2: false,
+            output: false
+        };
+        let activationTimes = {
+            neuron1: 0,
+            neuron2: 0,
+            output: 0
+        };
+
+        // Stimulation bar properties
+        const stimulationBarPosition = { x: 783, y: 0 };
+        const stimulationBarSize = { width: 400, height: 482 };
+        const stimulationBarColor = 'green';
+
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas.getContext('2d');
+        canvas.width = WIDTH;
+        canvas.height = HEIGHT;
+        let background = new Image();
+        background.src = '2-input-neuron.png';
+
+        // background.onload = function() {
+        //     ctx.drawImage(background, 0, 0, WIDTH - 200, HEIGHT);
+        //     main(); // Start the main function after the background loads
+        // };
+
+
+        // Function to draw a neuron
+        function drawNeuron(pos, active = false) {
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, NEURON_RADIUS, 0, 2 * Math.PI);
+
+            if (active) {
+                // Fill the neuron with the active color when active
+                ctx.fillStyle = NEURON_ACTIVE_COLOR;
+                ctx.fill();
+            } else {
+                // Make the neuron transparent (not filled) when inactive
+                ctx.fillStyle = 'rgba(0, 0, 0, 0)'; // Transparent fill
+                ctx.fill();
+            }
+
+            // Draw the border with black color
+            ctx.lineWidth = 2; // Set the border width
+            ctx.strokeStyle = 'black'; // Set the border color
+            ctx.stroke();
+        }
+
+
+        // Function to draw a connection line between neurons
+        function drawConnection(startPos, endPos) {
+            ctx.beginPath();
+            ctx.moveTo(startPos.x, startPos.y);
+            ctx.lineTo(endPos.x, endPos.y);
+            ctx.strokeStyle = LINE_COLOR;
+            ctx.stroke();
+        }
+
+        // Check if a point is within the radius of a neuron
+        function isWithinRadius(point, circleCenter) {
+            let dx = point.x - circleCenter.x;
+            let dy = point.y - circleCenter.y;
+            return (dx * dx + dy * dy) <= NEURON_RADIUS * NEURON_RADIUS;
+        }
+
+        // Functions to activate and deactivate neurons
+        function drawActiveNeuron(neuron) {
+            neuronActivation[neuron] = true;
+            activationTimes[neuron] = Date.now();
+        }
+
+        function drawInactiveNeuron(neuron) {
+            neuronActivation[neuron] = false;
+        }
+
+        // Function to draw the stimulation bar
+        function drawStimulationBar(percentage) {
+            let currentHeight = stimulationBarSize.height * percentage / 100;
+            let yPosition = stimulationBarPosition.y + (stimulationBarSize.height - currentHeight);
+
+            ctx.fillStyle = NEURON_COLOR;
+            ctx.fillRect(stimulationBarPosition.x, stimulationBarPosition.y, stimulationBarSize.width, stimulationBarSize.height);
+
+            ctx.fillStyle = stimulationBarColor;
+            ctx.fillRect(stimulationBarPosition.x, yPosition, stimulationBarSize.width, currentHeight);
+        }
+
+        function areFloatsEqual(num1, num2, tolerance = 1e-10) {
+            return Math.abs(num1 - num2) < tolerance;
+        }
+
+        // Main loop
+        function main() {
+            let inputToOutputStimulations = 60.0;
+            let outputStimulationLevel = 0.0;
+            let outputActivationLevel = 100.0;
+            let decayRate = 0.5;
+            let refractoryPeriod = 2000; // milliseconds
+            let currentTime = Date.now();
+
+            function update() {
+                currentTime = Date.now();
+
+                ctx.clearRect(0, 0, WIDTH, HEIGHT); // Clear the canvas
+                ctx.drawImage(background, 0, 0, WIDTH - 20, HEIGHT); // Redraw the background
+
+                // Check output activation
+                if (outputStimulationLevel > outputActivationLevel) {
+                    drawActiveNeuron('output');
+                    outputStimulationLevel = outputActivationLevel;
+                } else if (outputStimulationLevel > 0.0 && !areFloatsEqual(outputStimulationLevel, outputActivationLevel)) {
+                    outputStimulationLevel -= decayRate;
+                }
+
+                if (outputStimulationLevel < 0.0) {
+                    outputStimulationLevel = 0.0;
+                }
+
+                // Draw neurons
+                drawNeuron(NEURON1_POS, neuronActivation['neuron1']);
+                drawNeuron(NEURON2_POS, neuronActivation['neuron2']);
+                drawNeuron(OUTPUT_NEURON_POS, neuronActivation['output']);
+                drawStimulationBar(outputStimulationLevel);
+
+                // Deactivate neurons after ACTIVE_DURATION
+                for (let neuron in neuronActivation) {
+                    if (neuronActivation[neuron] && currentTime - activationTimes[neuron] > ACTIVE_DURATION) {
+                        drawInactiveNeuron(neuron);
+                        if (neuron === "output") {
+                            outputStimulationLevel = 0.0;
+                        }
+                    }
+                }
+
+                requestAnimationFrame(update);
+            }
+
+            canvas.addEventListener('mousedown', function(event) {
+                let rect = canvas.getBoundingClientRect();
+                let mouseX = event.clientX - rect.left;
+                let mouseY = event.clientY - rect.top;
+                let mousePos = { x: mouseX, y: mouseY };
+
+                if (isWithinRadius(mousePos, NEURON1_POS)) {
+                    if (currentTime - activationTimes["neuron1"] > refractoryPeriod) {
+                        outputStimulationLevel += inputToOutputStimulations;
+                        drawActiveNeuron('neuron1');
+                    }
+                } else if (isWithinRadius(mousePos, NEURON2_POS)) {
+                    if (currentTime - activationTimes["neuron2"] > refractoryPeriod) {
+                        outputStimulationLevel += inputToOutputStimulations;
+                        drawActiveNeuron('neuron2');
+                    }
+                }
+            });
+
+            update();
+        }
+
+        main();
+    </script>
+</body>
+</html>
