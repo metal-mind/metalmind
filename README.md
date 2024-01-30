@@ -7,8 +7,11 @@ Stimulation, stimulation decay, and refractory period are demoed.
 
 
 
-## Python version launch
+## Python Version
 ``` bash
 pip install pygame
 python main.py
 ```
+
+## HTML Version
+Github pages listed here: https://metal-mind.github.io/two-neuron-sim/
